@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeVoice — Structured Testimony Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f14; --bg2: #161820; --bg3: #1e2028;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8; --text2: #9a9893; --text3: #6a6967;
+    --accent: #7c6af5; --accent2: #5d4de0;
+    --safe: #2ea87a; --safe-bg: rgba(46,168,122,0.12);
+    --warn: #e0924d; --warn-bg: rgba(224,146,77,0.12);
+    --danger: #d95050; --danger-bg: rgba(217,80,80,0.12);
+    --info: #4a9dd4; --info-bg: rgba(74,157,212,0.12);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  /* API KEY SETUP */
+  #api-setup {
+    position: fixed; inset: 0; background: var(--bg); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .setup-box {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius);
+    padding: 40px; max-width: 480px; width: 90%; text-align: center;
+  }
+  .setup-box h2 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 300; margin-bottom: 10px; }
+  .setup-box p { color: var(--text2); font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
+  .api-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 12px 16px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
+    margin-bottom: 12px; transition: border-color 0.2s;
+  }
+  .api-input:focus { border-color: var(--accent); }
+  .api-note { font-size: 12px; color: var(--text3); margin-bottom: 20px; line-height: 1.6; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px; border-bottom: 1px solid var(--border);
+    background: var(--bg); position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 300; }
+  .logo span { color: var(--accent); }
+  .role-switch { display: flex; background: var(--bg3); border-radius: 999px; padding: 4px; gap: 2px; }
+  .role-btn {
+    padding: 6px 18px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    color: var(--text2); background: transparent; transition: all 0.2s;
+  }
+  .role-btn.active { background: var(--accent); color: #fff; }
+  .nav-badge { font-size: 12px; background: var(--bg3); border: 1px solid var(--border2); padding: 5px 12px; border-radius: 999px; color: var(--text2); }
+
+  /* VIEWS */
+  .view { display: none; padding: 32px; max-width: 960px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* HERO */
+  .hero-text { margin-bottom: 40px; }
+  .hero-text h1 { font-family: 'Fraunces', serif; font-size: 38px; font-weight: 300; line-height: 1.2; margin-bottom: 12px; }
+  .hero-text h1 em { font-style: italic; color: var(--accent); }
+  .hero-text p { font-size: 15px; color: var(--text2); line-height: 1.7; max-width: 560px; }
+
+  /* STEPPER */
+  .stepper { display: flex; gap: 0; margin-bottom: 36px; }
+  .step-dot { flex: 1; text-align: center; position: relative; padding-bottom: 12px; }
+  .step-dot::after { content: ''; position: absolute; top: 11px; left: 50%; right: -50%; height: 1px; background: var(--border2); z-index: 0; }
+  .step-dot:last-child::after { display: none; }
+  .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border2); background: var(--bg2); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; color: var(--text3); position: relative; z-index: 1; transition: all 0.3s; }
+  .step-dot.done .dot { background: var(--safe); border-color: var(--safe); color: #fff; }
+  .step-dot.active .dot { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 4px rgba(124,106,245,0.2); }
+  .step-dot .label { font-size: 11px; color: var(--text3); margin-top: 6px; }
+  .step-dot.active .label { color: var(--accent); }
+
+  /* CARDS */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 20px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
+
+  /* EMOTIONS */
+  .emotion-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .emotion-tag { padding: 7px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; border: 1px solid var(--border2); color: var(--text2); background: transparent; transition: all 0.18s; font-family: 'DM Sans', sans-serif; }
+  .emotion-tag:hover { border-color: var(--accent); color: var(--accent); }
+  .emotion-tag.selected { background: rgba(124,106,245,0.18); border-color: var(--accent); color: var(--accent); }
+  .emotion-tag.danger-tag.selected { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+  .emotion-tag.warn-tag.selected { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
+  .emotion-tag.safe-tag.selected { background: var(--safe-bg); border-color: var(--safe); color: var(--safe); }
+
+  /* MEMORY ZONE */
+  .memory-zone { position: relative; min-height: 140px; border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; cursor: text; transition: border-color 0.2s; }
+  .memory-zone:focus-within { border-color: var(--accent); }
+  .memory-zone textarea { width: 100%; background: transparent; border: none; outline: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.7; resize: none; min-height: 100px; }
+  .memory-zone textarea::placeholder { color: var(--text3); }
+
+  /* VOICE INPUT */
+  .voice-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .voice-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 999px; border: 1.5px solid var(--border2);
+    background: var(--bg3); color: var(--text2); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .voice-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .voice-btn.recording { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); animation: recordPulse 1.5s infinite; }
+  @keyframes recordPulse { 0%,100%{box-shadow: 0 0 0 0 rgba(217,80,80,0.3)} 50%{box-shadow: 0 0 0 8px rgba(217,80,80,0)} }
+  .voice-mic { width: 16px; height: 16px; }
+  .voice-status { font-size: 12px; color: var(--text3); }
+  .voice-status.active { color: var(--danger); }
+
+  .fragment-hint { font-size: 12px; color: var(--text3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .dot-pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .fragment-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .fchip { padding: 5px 12px; font-size: 12px; border-radius: var(--radius-sm); background: var(--bg3); border: 1px solid var(--border2); color: var(--text2); cursor: pointer; transition: 0.15s; }
+  .fchip:hover { border-color: var(--accent); color: var(--accent); }
+
+  .certainty-row { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+  .certainty-row label { font-size: 13px; color: var(--text2); flex-shrink: 0; }
+  .certainty-row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .certainty-val { font-size: 13px; font-weight: 500; min-width: 34px; text-align: right; color: var(--accent); }
+
+  .trigger-banner { background: var(--warn-bg); border: 1px solid rgba(224,146,77,0.3); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: var(--warn); display: none; margin-bottom: 12px; align-items: center; gap: 8px; }
+  .trigger-banner.visible { display: flex; }
+
+  /* TIMELINE */
+  .timeline-builder { margin-top: 8px; }
+  .timeline-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .tl-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 6px; position: relative; }
+  .tl-dot::before { content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); width: 1px; height: 32px; background: var(--border2); }
+  .timeline-item:last-child .tl-dot::before { display: none; }
+  .tl-content { flex: 1; }
+  .tl-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .tl-input:focus { border-color: var(--accent); }
+  .tl-meta { display: flex; gap: 8px; margin-top: 6px; }
+  .tl-time { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+  .add-event-btn { background: transparent; border: 1px dashed var(--border2); border-radius: var(--radius-sm); color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 16px; cursor: pointer; width: 100%; text-align: left; transition: 0.15s; }
+  .add-event-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* AI BOX */
+  .ai-assist-box { background: linear-gradient(135deg, rgba(124,106,245,0.08), rgba(74,157,212,0.06)); border: 1px solid rgba(124,106,245,0.25); border-radius: var(--radius); padding: 20px; margin-top: 20px; }
+  .ai-label { font-size: 11px; font-weight: 500; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .ai-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .ai-output { font-size: 14px; color: var(--text2); line-height: 1.8; min-height: 80px; }
+  .ai-output.loading { color: var(--text3); font-style: italic; }
+  .ai-typing::after { content: '▋'; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .ai-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .ai-btn { padding: 7px 14px; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.15s; }
+  .ai-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .ai-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* BUTTONS */
+  .btn-row { display: flex; gap: 12px; margin-top: 28px; }
+  .btn { padding: 12px 28px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.18s; border: none; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--text2); color: var(--text); }
+  .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(217,80,80,0.3); }
+
+  /* LEGAL VIEW */
+  .legal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .legal-header h2 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 300; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 500; color: var(--text); }
+  .stat-label { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .stat-card.s-safe .stat-num { color: var(--safe); }
+  .stat-card.s-warn .stat-num { color: var(--warn); }
+  .stat-card.s-info .stat-num { color: var(--info); }
+
+  .case-table { width: 100%; border-collapse: collapse; }
+  .case-table th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
+  .case-table td { padding: 14px 16px; font-size: 14px; color: var(--text2); border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .case-table tr:hover td { background: var(--bg3); cursor: pointer; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .badge-safe { background: var(--safe-bg); color: var(--safe); border: 1px solid rgba(46,168,122,0.3); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(224,146,77,0.3); }
+  .badge-info { background: var(--info-bg); color: var(--info); border: 1px solid rgba(74,157,212,0.3); }
+  .badge-accent { background: rgba(124,106,245,0.12); color: var(--accent); border: 1px solid rgba(124,106,245,0.3); }
+
+  /* DETAIL */
+  .detail-panel { display: none; }
+  .detail-panel.open { display: block; }
+  .back-btn { background: none; border: none; color: var(--text2); font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-bottom: 24px; display: flex; align-items: center; gap: 6px; padding: 0; }
+  .back-btn:hover { color: var(--text); }
+  .detail-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+  .section-heading { font-size: 13px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+
+  .timeline-visual { position: relative; padding-left: 20px; }
+  .tl-vis-item { position: relative; margin-bottom: 20px; }
+  .tl-vis-item::before { content: ''; position: absolute; left: -16px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .tl-vis-item::after { content: ''; position: absolute; left: -13px; top: 14px; width: 2px; height: calc(100% + 12px); background: var(--border2); }
+  .tl-vis-item:last-child::after { display: none; }
+  .tl-vis-time { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+  .tl-vis-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+  .tl-vis-certainty { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .certainty-bar { height: 4px; background: var(--border2); border-radius: 2px; margin-top: 4px; }
+  .certainty-fill { height: 100%; border-radius: 2px; background: var(--safe); }
+
+  .ai-structured-output { background: var(--bg3); border-radius: var(--radius); padding: 20px; font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 16px; border-left: 3px solid var(--accent); min-height: 80px; }
+  .ai-structured-output strong { color: var(--text); font-weight: 500; }
+
+  .export-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: 0.15s; margin-bottom: 8px; text-align: left; }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .export-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+  .flag-list { font-size: 13px; }
+  .flag-item { display: flex; align-items: flex-start; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--text2); line-height: 1.5; }
+  .flag-item:last-child { border-bottom: none; }
+  .flag-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .flag-dot.warn { background: var(--warn); }
+  .flag-dot.info { background: var(--info); }
+  .flag-dot.safe { background: var(--safe); }
+
+  /* SUCCESS */
+  #success-screen { display: none; text-align: center; padding: 80px 32px; }
+  #success-screen.active { display: block; }
+  .success-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--safe-bg); border: 2px solid var(--safe); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 30px; }
+  #success-screen h2 { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 300; margin-bottom: 12px; }
+  #success-screen p { color: var(--text2); font-size: 15px; max-width: 460px; margin: 0 auto 28px; line-height: 1.7; }
+  .case-ref { font-family: monospace; font-size: 13px; background: var(--bg3); border: 1px solid var(--border2); padding: 8px 16px; border-radius: var(--radius-sm); display: inline-block; color: var(--accent); margin-bottom: 28px; }
+
+  /* LOADER */
+  .loading-overlay { position: fixed; inset: 0; background: rgba(13,15,20,0.85); z-index: 999; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--text2); }
+
+  /* VOICE WAVEFORM */
+  .waveform { display: none; align-items: center; gap: 3px; height: 24px; }
+  .waveform.active { display: flex; }
+  .wave-bar { width: 3px; border-radius: 2px; background: var(--danger); animation: wave 1s ease-in-out infinite; }
+  .wave-bar:nth-child(1){height:8px;animation-delay:0s}
+  .wave-bar:nth-child(2){height:16px;animation-delay:0.1s}
+  .wave-bar:nth-child(3){height:24px;animation-delay:0.2s}
+  .wave-bar:nth-child(4){height:14px;animation-delay:0.3s}
+  .wave-bar:nth-child(5){height:20px;animation-delay:0.4s}
+  .wave-bar:nth-child(6){height:10px;animation-delay:0.5s}
+  @keyframes wave { 0%,100%{transform:scaleY(0.5)} 50%{transform:scaleY(1)} }
+
+  @media (max-width: 700px) {
+    nav { padding: 12px 16px; }
+    .view { padding: 20px 16px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .detail-grid { grid-template-columns: 1fr; }
+    .hero-text h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- API KEY SETUP SCREEN -->
+<div id="api-setup">
+  <div class="setup-box">
+    <div style="font-size:32px;margin-bottom:16px">🔐</div>
+    <h2>Connect AI Engine</h2>
+    <p>SafeVoice uses the Anthropic Claude API to structure testimonies in real time. Enter your API key to enable live AI features.</p>
+    <input class="api-input" type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+    <div class="api-note">Your key is stored only in this browser session and never sent to any server other than Anthropic's API directly.</div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveApiKey()">Connect & Launch →</button>
+    <div style="margin-top:12px">
+      <button class="btn btn-ghost" style="width:100%;font-size:13px" onclick="skipApiKey()">Skip — use demo mode</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loader">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loader-text">Processing…</div>
+</div>
+
+<nav>
+  <div class="logo">Safe<span>Voice</span></div>
+  <div class="role-switch">
+    <button class="role-btn active" onclick="switchRole('survivor')">Survivor</button>
+    <button class="role-btn" onclick="switchRole('legal')">Legal Professional</button>
+  </div>
+  <div class="nav-badge" id="ai-mode-badge">AI: Live</div>
+</nav>
+
+<!-- ══════════ SURVIVOR VIEW ══════════ -->
+<div class="view active" id="survivor-view">
+  <div class="hero-text">
+    <h1>Your voice,<br><em>on your terms.</em></h1>
+    <p>There is no right or wrong way to remember. Share what you can, when you can. Our AI helps shape your account into a form that courts can understand — without ever changing your truth.</p>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <div class="step-dot active" data-step="0"><div class="dot">1</div><div class="label">How you feel</div></div>
+    <div class="step-dot" data-step="1"><div class="dot">2</div><div class="label">What happened</div></div>
+    <div class="step-dot" data-step="2"><div class="dot">3</div><div class="label">Timeline</div></div>
+    <div class="step-dot" data-step="3"><div class="dot">4</div><div class="label">AI structure</div></div>
+  </div>
+
+  <!-- STEP 0 -->
+  <div id="step-0" class="step-content">
+    <div class="card">
+      <div class="card-title">How are you feeling right now?</div>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:18px;line-height:1.6;">Select all that apply. This is confidential and helps our system provide appropriate support.</p>
+      <div class="emotion-grid">
+        <button class="emotion-tag safe-tag" onclick="toggleEmotion(this)">Calm</button>
+        <button class="emotion-tag safe-tag" onclick="toggleEmotion(this)">Ready to share</button>
+        <button class="emotion-tag warn-tag" onclick="toggleEmotion(this)">Anxious</button>
+        <button class="emotion-tag warn-tag" onclick="toggleEmotion(this)">Nervous</button>
+        <button class="emotion-tag danger-tag" onclick="toggleEmotion(this)">Distressed</button>
+        <button class="emotion-tag danger-tag" onclick="toggleEmotion(this)">Overwhelmed</button>
+        <button class="emotion-tag" onclick="toggleEmotion(this)">Unsure</button>
+        <button class="emotion-tag" onclick="toggleEmotion(this)">Numb</button>
+        <button class="emotion-tag warn-tag" onclick="toggleEmotion(this)">Fearful</button>
+        <button class="emotion-tag safe-tag" onclick="toggleEmotion(this)">Determined</button>
+      </div>
+      <div class="trigger-banner" id="trigger-banner">
+        <span>⚠</span> You've indicated high distress. A trauma-informed counsellor is available. You can pause at any time.
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="nextStep(0)">Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div id="step-1" class="step-content" style="display:none">
+    <div class="card">
+      <div class="card-title">Share what you remember</div>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:18px;line-height:1.6;">Write or speak freely — fragments, pieces, even things you're unsure about. You don't need to go in order.</p>
+
+      <!-- VOICE INPUT -->
+      <div class="voice-row">
+        <button class="voice-btn" id="voice-btn" onclick="toggleVoice()">
+          <svg class="voice-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/>
+          </svg>
+          <span id="voice-btn-text">Start speaking</span>
+        </button>
+        <div class="waveform" id="waveform">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        </div>
+        <span class="voice-status" id="voice-status">Click to record your testimony</span>
+      </div>
+
+      <div class="memory-zone">
+        <textarea id="memory-text" rows="6" placeholder="Start wherever feels comfortable. You might write 'I remember the light was dim…' or 'I'm not sure of the exact time but…'"></textarea>
+        <div class="fragment-hint">
+          <div class="dot-pulse"></div>
+          Fragments and uncertain memories are valid. Add as many as you need.
+        </div>
+      </div>
+      <div class="fragment-chips">
+        <div class="fchip" onclick="appendFragment('I am not certain, but I think...')">Uncertain memory</div>
+        <div class="fchip" onclick="appendFragment('I remember clearly that...')">Clear memory</div>
+        <div class="fchip" onclick="appendFragment('I cannot recall the exact time, however...')">Time unclear</div>
+        <div class="fchip" onclick="appendFragment('I was told later that...')">Secondhand info</div>
+        <div class="fchip" onclick="appendFragment('I physically felt...')">Physical sensation</div>
+        <div class="fchip" onclick="appendFragment('This is difficult to describe, but...')">Hard to express</div>
+      </div>
+      <div class="certainty-row">
+        <label>Overall certainty of this account</label>
+        <input type="range" min="10" max="100" value="60" id="certainty" oninput="document.getElementById('cert-val').textContent=this.value+'%'">
+        <span class="certainty-val" id="cert-val">60%</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="prevStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep(1)">Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step-2" class="step-content" style="display:none">
+    <div class="card">
+      <div class="card-title">Reconstruct what you remember</div>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:18px;line-height:1.6;">Add events in any order — even if approximate. The AI will help sequence them.</p>
+      <div class="timeline-builder" id="timeline-builder">
+        <div class="timeline-item">
+          <div class="tl-dot"></div>
+          <div class="tl-content">
+            <div class="tl-time">Event 1</div>
+            <input class="tl-input" placeholder="Describe what happened…" type="text">
+            <div class="tl-meta"><input class="tl-input" placeholder="Approximate time or date (optional)" type="text" style="font-size:12px;padding:6px 10px"></div>
+          </div>
+        </div>
+      </div>
+      <button class="add-event-btn" onclick="addTimelineEvent()">+ Add another event</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="prevStep(2)">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep(2)">Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="step-3" class="step-content" style="display:none">
+    <div class="card">
+      <div class="card-title">AI-structured account</div>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:18px;line-height:1.6;">The AI has reorganised your account into a legal-friendly format. Nothing has been changed — only structured. Review and approve.</p>
+      <div class="ai-assist-box">
+        <div class="ai-label">AI Structured Summary</div>
+        <div class="ai-output" id="ai-output-survivor">Generating your structured account…</div>
+        <div class="ai-actions">
+          <button class="ai-btn" id="btn-restructure" onclick="reStructure()">Restructure</button>
+          <button class="ai-btn" id="btn-simplify" onclick="simplifyLanguage()">Simplify language</button>
+          <button class="ai-btn primary" id="btn-approve" onclick="approveAndSubmit()">Approve & Submit</button>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="prevStep(3)">← Back</button>
+      <button class="btn btn-danger" onclick="clearAndRestart()">Clear & Restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="success-screen">
+  <div class="success-icon">✓</div>
+  <h2>Your testimony has been submitted.</h2>
+  <p>Your account has been securely stored and shared with the assigned legal professional. You can request a copy or withdraw at any time.</p>
+  <div class="case-ref" id="case-ref-display">CASE-REF: #SV-2024-0047</div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="switchRole('legal')">View Legal Dashboard →</button>
+    <button class="btn btn-ghost" onclick="restartSurvivor()">Submit another</button>
+  </div>
+</div>
+
+<!-- ══════════ LEGAL VIEW ══════════ -->
+<div class="view" id="legal-view">
+  <div id="case-list-panel">
+    <div class="legal-header">
+      <h2>Case Dashboard</h2>
+      <button class="btn btn-primary" style="font-size:13px;padding:9px 20px" onclick="exportAllPDF()">Export All as PDF</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num">12</div><div class="stat-label">Total testimonies</div></div>
+      <div class="stat-card s-safe"><div class="stat-num">7</div><div class="stat-label">Structured & ready</div></div>
+      <div class="stat-card s-warn"><div class="stat-num">3</div><div class="stat-label">Needs review</div></div>
+      <div class="stat-card s-info"><div class="stat-num">2</div><div class="stat-label">Flagged for follow-up</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="case-table">
+        <thead>
+          <tr>
+            <th>Case ID</th><th>Submitted</th><th>Certainty</th>
+            <th>Emotions logged</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="openCase('SV-2024-0047','78%','Anxious,Determined','Structured')">
+            <td style="color:var(--text);font-weight:500">#SV-2024-0047</td>
+            <td>Apr 4, 2024</td>
+            <td><span style="color:var(--safe)">78%</span></td>
+            <td><span class="badge badge-warn">Anxious</span> <span class="badge badge-accent">Determined</span></td>
+            <td><span class="badge badge-safe">Structured</span></td>
+            <td style="color:var(--accent)">View →</td>
+          </tr>
+          <tr onclick="openCase('SV-2024-0041','42%','Overwhelmed','Needs Review')">
+            <td style="color:var(--text);font-weight:500">#SV-2024-0041</td>
+            <td>Apr 2, 2024</td>
+            <td><span style="color:var(--warn)">42%</span></td>
+            <td><span class="badge badge-warn">Overwhelmed</span></td>
+            <td><span class="badge badge-warn">Needs Review</span></td>
+            <td style="color:var(--accent)">View →</td>
+          </tr>
+          <tr onclick="openCase('SV-2024-0039','91%','Calm,Ready','Structured')">
+            <td style="color:var(--text);font-weight:500">#SV-2024-0039</td>
+            <td>Apr 1, 2024</td>
+            <td><span style="color:var(--safe)">91%</span></td>
+            <td><span class="badge badge-safe">Calm</span> <span class="badge badge-safe">Ready</span></td>
+            <td><span class="badge badge-safe">Structured</span></td>
+            <td style="color:var(--accent)">View →</td>
+          </tr>
+          <tr onclick="openCase('SV-2024-0035','28%','Fearful,Distressed','Flagged')">
+            <td style="color:var(--text);font-weight:500">#SV-2024-0035</td>
+            <td>Mar 28, 2024</td>
+            <td><span style="color:var(--danger)">28%</span></td>
+            <td><span class="badge badge-warn">Fearful</span> <span class="badge" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(217,80,80,0.3)">Distressed</span></td>
+            <td><span class="badge badge-info">Flagged</span></td>
+            <td style="color:var(--accent)">View →</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CASE DETAIL -->
+  <div class="detail-panel" id="case-detail-panel">
+    <button class="back-btn" onclick="closeCaseDetail()">← Back to dashboard</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <div>
+        <h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:300" id="detail-case-id">#SV-2024-0047</h2>
+        <div style="font-size:13px;color:var(--text2);margin-top:3px">Submitted · Certainty: <span style="color:var(--safe)" id="detail-certainty">78%</span></div>
+      </div>
+      <span class="badge badge-safe" style="margin-left:auto" id="detail-status">Structured</span>
+    </div>
+    <div class="detail-grid">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-heading">Emotional state at time of recording</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="detail-emotions"></div>
+          <p style="font-size:13px;color:var(--text3);line-height:1.6;">Note: Trauma responses including fragmented recall, emotional numbness, or distress are clinically recognised. Memory inconsistency does not indicate unreliability.</p>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-heading">Reconstructed timeline</div>
+          <div class="timeline-visual">
+            <div class="tl-vis-item">
+              <div class="tl-vis-time">~9:30 PM</div>
+              <div class="tl-vis-text">Initial encounter. Survivor felt unable to leave.</div>
+              <div class="tl-vis-certainty">Certainty: 85%</div>
+              <div class="certainty-bar"><div class="certainty-fill" style="width:85%"></div></div>
+            </div>
+            <div class="tl-vis-item">
+              <div class="tl-vis-time">Unknown — later that evening</div>
+              <div class="tl-vis-text">Physical contact and verbal threats. Some details fragmented (clinically normal).</div>
+              <div class="tl-vis-certainty">Certainty: 60%</div>
+              <div class="certainty-bar"><div class="certainty-fill" style="width:60%;background:var(--warn)"></div></div>
+            </div>
+            <div class="tl-vis-item">
+              <div class="tl-vis-time">Following morning</div>
+              <div class="tl-vis-text">Survivor left location and contacted a support worker. High clarity.</div>
+              <div class="tl-vis-certainty">Certainty: 95%</div>
+              <div class="certainty-bar"><div class="certainty-fill" style="width:95%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-heading">AI-structured legal summary</div>
+          <div class="ai-assist-box" style="margin-top:0">
+            <div class="ai-label">Structured for legal review</div>
+            <div class="ai-structured-output" id="detail-ai-summary">Loading AI-generated summary…</div>
+          </div>
+          <div class="ai-actions" style="margin-top:12px">
+            <button class="ai-btn" id="legal-regen-btn" onclick="regenerateLegal()">Regenerate with AI</button>
+            <button class="ai-btn" onclick="addLegalNote()">Add legal note</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-heading">Flags & notes</div>
+          <div class="flag-list" id="flag-list">
+            <div class="flag-item"><div class="flag-dot warn"></div>Mid-event timeline gap — follow-up recommended</div>
+            <div class="flag-item"><div class="flag-dot info"></div>High distress markers present at submission</div>
+            <div class="flag-item"><div class="flag-dot safe"></div>Post-event account is highly consistent</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-heading">Export testimony</div>
+          <button class="export-btn" onclick="exportPDF()"><div class="export-icon">📄</div><div><div style="color:var(--text);font-size:13px">Export as PDF</div><div style="font-size:11px;color:var(--text3)">Court-ready format</div></div></button>
+          <button class="export-btn" onclick="exportWord()"><div class="export-icon">📝</div><div><div style="color:var(--text);font-size:13px">Export as DOCX</div><div style="font-size:11px;color:var(--text3)">Editable Word document</div></div></button>
+          <button class="export-btn" onclick="exportJSON()"><div class="export-icon">⚙</div><div><div style="color:var(--text);font-size:13px">Export structured JSON</div><div style="font-size:11px;color:var(--text3)">For case management systems</div></div></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let apiKey = '';
+let demoMode = false;
+let currentStep = 0;
+let selectedEmotions = [];
+let timelineCount = 1;
+let memoryText = '';
+let recognition = null;
+let isRecording = false;
+let currentCaseData = {};
+
+// ── API KEY ──
+function saveApiKey() {
+  const k = document.getElementById('api-key-input').value.trim();
+  if (!k.startsWith('sk-ant')) { alert('Please enter a valid Anthropic API key (starts with sk-ant)'); return; }
+  apiKey = k;
+  document.getElementById('api-setup').style.display = 'none';
+  document.getElementById('ai-mode-badge').textContent = 'AI: Live';
+  document.getElementById('ai-mode-badge').style.color = 'var(--safe)';
+}
+function skipApiKey() {
+  demoMode = true;
+  document.getElementById('api-setup').style.display = 'none';
+  document.getElementById('ai-mode-badge').textContent = 'AI: Demo';
+  document.getElementById('ai-mode-badge').style.color = 'var(--warn)';
+}
+
+// ── ANTHROPIC API CALL ──
+async function callClaude(systemPrompt, userMessage) {
+  if (demoMode || !apiKey) return null;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }]
+    })
+  });
+  if (!res.ok) throw new Error('API error: ' + res.status);
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+// ── STREAMING TYPEWRITER ──
+function typewriterEffect(el, text, speed = 18) {
+  el.innerHTML = '';
+  el.classList.add('ai-typing');
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i < text.length) {
+      el.innerHTML = text.slice(0, i + 1).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+      i++;
+    } else {
+      el.classList.remove('ai-typing');
+      clearInterval(interval);
+    }
+  }, speed);
+}
+
+// ── LOADER ──
+function showLoader(text) {
+  document.getElementById('loader-text').textContent = text || 'Processing…';
+  document.getElementById('loader').classList.add('show');
+}
+function hideLoader() { document.getElementById('loader').classList.remove('show'); }
+
+// ── VOICE INPUT ──
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
+    return;
+  }
+  if (isRecording) stopVoice();
+  else startVoice();
+}
+
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-IN';
+
+  const ta = document.getElementById('memory-text');
+  let finalTranscript = ta.value;
+
+  recognition.onstart = () => {
+    isRecording = true;
+    document.getElementById('voice-btn').classList.add('recording');
+    document.getElementById('voice-btn-text').textContent = 'Stop recording';
+    document.getElementById('waveform').classList.add('active');
+    document.getElementById('voice-status').textContent = 'Listening…';
+    document.getElementById('voice-status').classList.add('active');
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + ' ';
+      else interim = e.results[i][0].transcript;
+    }
+    ta.value = finalTranscript + interim;
+  };
+
+  recognition.onerror = (e) => {
+    stopVoice();
+    if (e.error !== 'aborted') document.getElementById('voice-status').textContent = 'Mic error: ' + e.error;
+  };
+
+  recognition.onend = () => { if (isRecording) stopVoice(); };
+  recognition.start();
+}
+
+function stopVoice() {
+  isRecording = false;
+  if (recognition) { recognition.stop(); recognition = null; }
+  document.getElementById('voice-btn').classList.remove('recording');
+  document.getElementById('voice-btn-text').textContent = 'Start speaking';
+  document.getElementById('waveform').classList.remove('active');
+  document.getElementById('voice-status').textContent = 'Recording saved';
+  document.getElementById('voice-status').classList.remove('active');
+}
+
+// ── NAV ──
+function switchRole(role) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('success-screen').style.display = 'none';
+  if (role === 'survivor') {
+    document.querySelectorAll('.role-btn')[0].classList.add('active');
+    document.getElementById('survivor-view').classList.add('active');
+  } else {
+    document.querySelectorAll('.role-btn')[1].classList.add('active');
+    document.getElementById('legal-view').classList.add('active');
+    document.getElementById('case-list-panel').style.display = 'block';
+    document.getElementById('case-detail-panel').classList.remove('open');
+  }
+}
+
+// ── EMOTIONS ──
+function toggleEmotion(el) {
+  el.classList.toggle('selected');
+  selectedEmotions = Array.from(document.querySelectorAll('.emotion-tag.selected')).map(e => e.textContent);
+  const hasDistress = selectedEmotions.some(e => ['Distressed','Overwhelmed'].includes(e));
+  document.getElementById('trigger-banner').classList.toggle('visible', hasDistress);
+}
+
+// ── STEPS ──
+function nextStep(from) {
+  if (from === 1) memoryText = document.getElementById('memory-text').value;
+  if (from === 2) {
+    goToStep(3);
+    generateAISummary();
+    return;
+  }
+  goToStep(from + 1);
+}
+function prevStep(from) { goToStep(from - 1); }
+
+function goToStep(step) {
+  document.querySelectorAll('.step-content').forEach(s => s.style.display = 'none');
+  document.getElementById('step-' + step).style.display = 'block';
+  currentStep = step;
+  document.querySelectorAll('.step-dot').forEach((d, i) => {
+    d.classList.remove('active', 'done');
+    if (i < step) d.classList.add('done');
+    if (i === step) d.classList.add('active');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── AI STRUCTURING (LIVE) ──
+async function generateAISummary(mode = 'standard') {
+  const cert = document.getElementById('certainty').value;
+  const emotions = selectedEmotions.join(', ') || 'not specified';
+  const tlItems = Array.from(document.querySelectorAll('#timeline-builder .tl-input:first-of-type')).map(i => i.value).filter(Boolean);
+  const timeline = tlItems.length ? tlItems.join('; ') : 'No timeline events provided';
+
+  const outputEl = document.getElementById('ai-output-survivor');
+  outputEl.classList.add('loading');
+  outputEl.innerHTML = 'Generating structured account with AI…';
+  ['btn-restructure','btn-simplify','btn-approve'].forEach(id => document.getElementById(id).disabled = true);
+
+  const systemPrompt = `You are a trauma-informed legal documentation assistant for SafeVoice, a platform that helps survivors of sexual violence, trafficking, and abuse give structured testimony. Your job is to structure a survivor's account into a clear, legal-friendly format WITHOUT changing their words or meaning. You must:
+- Use trauma-informed, sensitive language
+- Clearly label what is certain vs uncertain
+- Note that memory fragmentation is clinically normal
+- Never make the survivor's account sound dishonest or inconsistent
+- Output in plain HTML using <strong> tags for headings only
+- Be concise — maximum 200 words
+${mode === 'simplified' ? '- Use plain, simple language suitable for initial disclosure' : ''}
+${mode === 'standard' ? '- Use formal but accessible legal language' : ''}`;
+
+  const userMessage = `Structure this testimony:
+EMOTIONAL STATE: ${emotions}
+CERTAINTY LEVEL: ${cert}%
+MEMORY ACCOUNT: ${memoryText || 'Not provided in this demo.'}
+TIMELINE EVENTS: ${timeline}
+
+Output a structured legal account.`;
+
+  if (demoMode || !apiKey) {
+    setTimeout(() => {
+      const demo = `<strong>Nature of incident:</strong> The survivor reports an incident involving coercion and physical contact occurring in the evening.<br><br><strong>Key facts established:</strong> (1) Survivor was present at a location they felt unable to leave. (2) Verbal threats and physical contact are alleged. (3) Survivor sought help the following morning.<br><br><strong>Memory note:</strong> Fragmented recall is present, consistent with trauma-induced memory encoding. Certainty self-assessed at <strong>${cert}%</strong>. Emotional state at time of recording: ${emotions}. This should not be construed as inconsistency.`;
+      outputEl.classList.remove('loading');
+      typewriterEffect(outputEl, demo.replace(/<[^>]+>/g, ''));
+      setTimeout(() => { outputEl.innerHTML = demo; }, demo.replace(/<[^>]+>/g, '').length * 18 + 100);
+      ['btn-restructure','btn-simplify','btn-approve'].forEach(id => document.getElementById(id).disabled = false);
+    }, 1200);
+    return;
+  }
+
+  try {
+    const result = await callClaude(systemPrompt, userMessage);
+    outputEl.classList.remove('loading');
+    typewriterEffect(outputEl, result);
+    ['btn-restructure','btn-simplify','btn-approve'].forEach(id => document.getElementById(id).disabled = false);
+  } catch (err) {
+    outputEl.classList.remove('loading');
+    outputEl.innerHTML = `<span style="color:var(--danger)">API error: ${err.message}. Check your API key or switch to demo mode.</span>`;
+    ['btn-restructure','btn-simplify','btn-approve'].forEach(id => document.getElementById(id).disabled = false);
+  }
+}
+
+function reStructure() { generateAISummary('standard'); }
+function simplifyLanguage() { generateAISummary('simplified'); }
+
+function approveAndSubmit() {
+  showLoader('Securely submitting testimony…');
+  setTimeout(() => {
+    hideLoader();
+    document.getElementById('survivor-view').classList.remove('active');
+    const s = document.getElementById('success-screen');
+    s.style.display = 'block';
+    const n = Math.floor(Math.random() * 9000) + 1000;
+    document.getElementById('case-ref-display').textContent = 'CASE-REF: #SV-2024-' + n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 1600);
+}
+
+function clearAndRestart() {
+  if (!confirm('Clear all entered information and restart?')) return;
+  restartSurvivor();
+}
+
+function restartSurvivor() {
+  if (isRecording) stopVoice();
+  document.getElementById('success-screen').style.display = 'none';
+  document.getElementById('survivor-view').classList.add('active');
+  document.getElementById('memory-text').value = '';
+  document.querySelectorAll('.emotion-tag.selected').forEach(e => e.classList.remove('selected'));
+  document.getElementById('trigger-banner').classList.remove('visible');
+  document.getElementById('timeline-builder').innerHTML = `<div class="timeline-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-time">Event 1</div><input class="tl-input" placeholder="Describe what happened…" type="text"><div class="tl-meta"><input class="tl-input" placeholder="Approximate time or date (optional)" type="text" style="font-size:12px;padding:6px 10px"></div></div></div>`;
+  timelineCount = 1;
+  goToStep(0);
+}
+
+function appendFragment(text) {
+  const ta = document.getElementById('memory-text');
+  ta.value += (ta.value ? '\n\n' : '') + text;
+  ta.focus();
+}
+
+function addTimelineEvent() {
+  timelineCount++;
+  const builder = document.getElementById('timeline-builder');
+  const div = document.createElement('div');
+  div.className = 'timeline-item';
+  div.innerHTML = `<div class="tl-dot"></div><div class="tl-content"><div class="tl-time">Event ${timelineCount}</div><input class="tl-input" placeholder="Describe what happened…" type="text"><div class="tl-meta"><input class="tl-input" placeholder="Approximate time or date (optional)" type="text" style="font-size:12px;padding:6px 10px"></div></div>`;
+  builder.appendChild(div);
+}
+
+// ── LEGAL ──
+function openCase(id, certainty, emotions, status) {
+  document.getElementById('case-list-panel').style.display = 'none';
+  document.getElementById('case-detail-panel').classList.add('open');
+  document.getElementById('detail-case-id').textContent = '#' + id;
+  document.getElementById('detail-certainty').textContent = certainty;
+  document.getElementById('detail-status').textContent = status;
+
+  const emotionsEl = document.getElementById('detail-emotions');
+  emotionsEl.innerHTML = emotions.split(',').map(e => `<span class="badge badge-accent">${e.trim()}</span>`).join(' ');
+
+  currentCaseData = { id, certainty, emotions, status };
+  generateLegalSummary(id, certainty, emotions);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function generateLegalSummary(id, certainty, emotions) {
+  const el = document.getElementById('detail-ai-summary');
+  el.innerHTML = 'Generating AI legal summary…';
+
+  const systemPrompt = `You are a legal documentation AI for trauma testimony. Generate a formal legal case summary. Use structured format with bold headings. Include: nature of incident, established facts, memory reliability note, and recommended follow-up actions. Maximum 180 words. Use <strong> tags for section headings.`;
+  const userMsg = `Case ${id}. Certainty: ${certainty}. Emotional state: ${emotions}. Generate a legal case summary.`;
+
+  if (demoMode || !apiKey) {
+    setTimeout(() => {
+      el.innerHTML = `<strong>Nature of incident:</strong> Alleged coercive control and physical contact, evening occurrence.<br><br><strong>Established facts:</strong> (1) Restricted perceived exit from location. (2) Physical and verbal threats alleged. (3) Disclosure to support worker the following morning.<br><br><strong>Reliability note:</strong> Memory fragmentation consistent with acute stress response. Self-reported certainty: ${certainty}. Emotional state at recording: ${emotions}.<br><br><strong>Recommended action:</strong> Schedule follow-up interview with trauma-informed advocate within 14 days.`;
+    }, 800);
+    return;
+  }
+
+  try {
+    const result = await callClaude(systemPrompt, userMsg);
+    el.innerHTML = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  } catch(err) {
+    el.innerHTML = `<span style="color:var(--danger)">API error: ${err.message}</span>`;
+  }
+}
+
+async function regenerateLegal() {
+  const btn = document.getElementById('legal-regen-btn');
+  btn.disabled = true;
+  btn.textContent = 'Regenerating…';
+  await generateLegalSummary(currentCaseData.id, currentCaseData.certainty, currentCaseData.emotions);
+  btn.disabled = false;
+  btn.textContent = 'Regenerate with AI';
+}
+
+function addLegalNote() {
+  const note = prompt('Add a legal note to this case:');
+  if (note) {
+    const list = document.getElementById('flag-list');
+    const el = document.createElement('div');
+    el.className = 'flag-item';
+    el.innerHTML = `<div class="flag-dot info"></div>${note}`;
+    list.appendChild(el);
+  }
+}
+
+function closeCaseDetail() {
+  document.getElementById('case-detail-panel').classList.remove('open');
+  document.getElementById('case-list-panel').style.display = 'block';
+}
+
+// ── EXPORTS ──
+function exportPDF() {
+  showLoader('Generating court-ready PDF…');
+  setTimeout(() => { hideLoader(); alert('PDF exported: testimony_' + (currentCaseData.id || 'case') + '.pdf\n\n(In production: generates a real signed PDF with structured testimony and trauma context notes.)'); }, 1500);
+}
+function exportWord() {
+  showLoader('Generating DOCX…');
+  setTimeout(() => { hideLoader(); alert('DOCX exported.\n\n(In production: generates an editable Word document with all case metadata.)'); }, 1200);
+}
+function exportJSON() {
+  const data = {
+    caseId: document.getElementById('detail-case-id').textContent,
+    certainty: document.getElementById('detail-certainty').textContent,
+    emotions: currentCaseData.emotions ? currentCaseData.emotions.split(',') : [],
+    aiSummary: document.getElementById('detail-ai-summary').innerText,
+    exportedAt: new Date().toISOString(),
+    traumaNote: 'Memory fragmentation is clinically normal and does not indicate unreliability.'
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'testimony_' + data.caseId.replace(/[^a-z0-9]/gi, '_') + '.json';
+  a.click();
+}
+function exportAllPDF() {
+  showLoader('Generating batch export…');
+  setTimeout(() => { hideLoader(); alert('All 12 cases exported as a bundled PDF.\n\n(In production: generates a legally formatted multi-case report.)'); }, 2000);
+}
+</script>
+</body>
+</html>
