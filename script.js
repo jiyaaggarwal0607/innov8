@@ -127,6 +127,8 @@ const App = (() => {
       return;
     }
 
+ 
+
     state.recognition = new SR();
     state.recognition.continuous     = true;
     state.recognition.interimResults = true;
@@ -601,12 +603,17 @@ Case ref: ${state.caseRef}`;
     showLoader('Submitting testimony securely…');
 
     try {
-      if (!state.demoMode && state.apiKey) {
-        // In production: save to backend via /api/testimonies
-        await sleep(1500);
-      } else {
-        await sleep(1800);
-      }
+      const payload = {
+        caseRef: state.caseRef,
+        storyText: state.storyText,
+        emotions: state.emotions,
+        certainty: parseInt(state.certainty) || 60,
+        timeline: state.timeline,
+        offenderDesc: state.offenderDesc,
+        summary: state.aiSummary
+      };
+
+      await callBackend('/api/testimony', payload);
       hideLoader();
 
       // Show success
@@ -681,6 +688,7 @@ Case ref: ${state.caseRef}`;
 
   // ── PUBLIC API ────────────────────────────────
   return {
+    init,
     // Navigation
     goTo,
     // Emotions
@@ -701,6 +709,7 @@ Case ref: ${state.caseRef}`;
 
 // ── BOOT ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  App.init();
   App.goTo(1);
   // Inject toast keyframe
   const style = document.createElement('style');

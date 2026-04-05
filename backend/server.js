@@ -31,6 +31,11 @@ const aiLimiter = rateLimit({
   max: 20,
   message: { error: 'AI rate limit reached. Please wait a moment.' },
 });
+
+
+
+
+
 app.use('/api/', limiter);
 app.use('/api/ai/', aiLimiter);
 
@@ -39,9 +44,6 @@ app.use(express.json({ limit: '2mb' }));
 
 // ── DB ──
 connectDB();
-app.get('/', (req, res) => {
-  res.send('Safevoice API is running');
-});
 
 // ── ROUTES ──
 app.use('/api/auth',      authRoutes);
@@ -58,5 +60,5 @@ app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`SafeVoice API running on port ${PORT}`));
